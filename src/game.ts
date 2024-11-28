@@ -16,8 +16,9 @@ type GameConfig = {
 };
 
 class Game {
-  private maze: Square[][];
+  // [updated]: Changed player initialization to be just null as we'll create it in constructor
   private player: Player;
+  private maze: Square[][];
   private enemy: {
     position: Position;
     path: Position[];
@@ -26,19 +27,22 @@ class Game {
   private isRunning: boolean = false;
   private intervalId: number | undefined;
 
-  constructor(config?: GameConfig) {
+  constructor(ctx: CanvasRenderingContext2D, config: GameConfig) {
     this.maze = []; // generateMaze
-    this.player = new Player({ x: 0, y: 0 });
     this.enemy = {
-      position: { x: 0, y: 0 },
+      position: { x: 1, y: 1 },
       path: [],
     };
     this.target = { x: 4, y: 3 };
+    // [updated]: Initialize player here with a starting position
+    this.player = new Player({ x: 100, y: 100 }, ctx);
   }
 
   getPlayer() {
     return this.player;
   }
+
+  // [updated]: Removed setPlayer method as we don't need it anymore
 
   update() {
     // Update game state here
@@ -51,11 +55,9 @@ class Game {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     // Draw maze (i dont think redrawing the maze everytime is ok)
     this.drawMaze(ctx);
-    // Draw player
-    this.drawPlayer(ctx);
-    // Draw enemy
+    // [updated]: Simply call player.draw() since player already exists
+    this.player?.draw(ctx);
     this.drawEnemy(ctx);
-    // Draw target
     this.drawTarget(ctx);
   }
 
@@ -76,12 +78,6 @@ class Game {
         );
       }
     }
-  }
-
-  private drawPlayer(ctx: CanvasRenderingContext2D) {
-    const pos = this.player.getPosition();
-    ctx.fillStyle = "red";
-    ctx.fillRect(pos.x + 10, pos.y + 10, SQUARE_SIZE, SQUARE_SIZE);
   }
 
   private drawEnemy(ctx: CanvasRenderingContext2D) {
@@ -126,7 +122,10 @@ export function initGame(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const game = new Game();
+  canvas.tabIndex = 1;
+  canvas.focus();
+
+  const game = new Game(ctx, {});
 
   setupControls(canvas, game, ctx);
 
@@ -171,10 +170,8 @@ function setupControls(
 
     if (isMovement && game.isGameRunning()) {
       const player = game.getPlayer();
-      // if checkCollision ...
-      player.move(mapKeyToDirection[key]);
+      player?.move(mapKeyToDirection[key]);
     } else if (e.key === "Escape") {
-      // Toggle pause
       if (game.isGameRunning()) {
         game.stop();
       } else {
