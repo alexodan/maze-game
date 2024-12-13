@@ -23,9 +23,8 @@ const oppositeWalls = {
 
 export class Player {
   private position!: Position;
-  private facing!: Direction;
+  private faceDirection!: Direction;
   private isMoving!: boolean;
-  private frameIndex!: number;
   private animationInterval: number | null = null;
   public spriteSize!: number;
   public spriteSheet!: HTMLImageElement;
@@ -48,26 +47,30 @@ export class Player {
     const { x, y } = this.position;
     const row = this.board.querySelector(`[class="row-${y + 1}"]`)!;
     const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
-    cell.textContent = options?.clear ? " " : "👣";
+    const hasRival = cell.textContent?.includes("👻") || false;
+    if (options?.clear) {
+      cell.textContent = hasRival ? "👣" : " ";
+    } else {
+      cell.textContent = hasRival ? "👣👻" : "👣";
+    }
   }
 
   move(direction: Direction) {
-    this.facing = direction;
-    const moveAmount = 1;
+    this.faceDirection = direction;
     const current = this.position;
     let newPos: Position;
     switch (direction) {
       case "down":
-        newPos = { x: current.x, y: current.y + moveAmount };
+        newPos = { x: current.x, y: current.y + 1 };
         break;
       case "up":
-        newPos = { x: current.x, y: current.y - moveAmount };
+        newPos = { x: current.x, y: current.y - 1 };
         break;
       case "left":
-        newPos = { x: current.x - moveAmount, y: current.y };
+        newPos = { x: current.x - 1, y: current.y };
         break;
       case "right":
-        newPos = { x: current.x + moveAmount, y: current.y };
+        newPos = { x: current.x + 1, y: current.y };
         break;
       default:
         throw Error("invalid direction");
@@ -113,6 +116,7 @@ export class Player {
   }
 }
 
+// For testing purposes
 export const winnerPath = [
   "right",
   "right",

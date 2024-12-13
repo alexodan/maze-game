@@ -1,4 +1,5 @@
-import { Direction, Player, winnerPath } from "./player";
+import { Direction, Player, Position, winnerPath } from "./player";
+import { Rival } from "./rival";
 
 export type Square = {
   x: number;
@@ -29,22 +30,31 @@ type GameConfig = {
 };
 
 class Game {
-  // [updated]: Changed player initialization to be just null as we'll create it in constructor
   private player: Player;
+  private rival: Rival;
+
   private maze: Square[][];
-  // private enemy: {
-  //   position: Position;
-  //   path: Position[];
-  // };
-  // private target: Position;
+  private target: Position;
   private isRunning = false;
   private isOver = false;
   private intervalId: number | undefined;
 
   constructor(board: HTMLDivElement, config: GameConfig) {
     this.maze = []; // generateMaze
-    // [updated]: Initialize player here with a starting position
     this.player = new Player({ x: 0, y: 0 }, board);
+    this.target = { x: 4, y: 1 };
+
+    // TODO: extract to its own class Target or smth
+    const { x, y } = this.target;
+    const row = board.querySelector(`[class="row-${y + 1}"]`)!;
+    const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
+    cell.textContent = "⛳";
+
+    this.rival = new Rival(
+      { x: 0, y: 0 },
+      board,
+      winnerPath.slice(0, winnerPath.length - 1)
+    );
   }
 
   getPlayer() {
@@ -52,13 +62,21 @@ class Game {
   }
 
   update() {
-    // Update game state here
-    // 1. Update enemy position based on path
-    // 2. Check win/lose conditions
+    const playerPos = this.player.getPosition();
+    const rivalPos = this.rival.getPosition();
+    if (playerPos.x === this.target.x && playerPos.y === this.target.y) {
+      this.isOver = true;
+      this.stop();
+      alert("Game over. You win!");
+    } else if (rivalPos.x === this.target.x && rivalPos.y === this.target.y) {
+      this.isOver = true;
+      this.stop();
+      alert("Game over. You lost!");
+    }
   }
 
   draw(board: HTMLDivElement) {
-    // Draw maze (i dont think redrawing the maze everytime is ok)
+    // TODO: i dont think redrawing the maze everytime is ok
     this.drawMaze(board);
   }
 
@@ -90,12 +108,14 @@ class Game {
       () => setupRotation(board),
       2500 + Math.random() * 2500
     );
+    this.rival.startMoving(800);
   }
 
   stop() {
     this.isRunning = false;
     document.querySelector(".status")!.textContent = "Paused ⏸️";
     clearInterval(this.intervalId);
+    this.rival.stopMoving();
   }
 
   isGameRunning() {
@@ -116,8 +136,7 @@ export function initGame(board: HTMLDivElement): void {
 }
 
 function gameLoop(game: Game, board: HTMLDivElement) {
-  // Only run if game is active/unfinished
-  // !game.isRunning || game.isFinished
+  // !game.isRunning || game.isOver?
   if (!game.isGameRunning()) return;
 
   // Update game state
