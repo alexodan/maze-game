@@ -10,17 +10,58 @@
 }
 
 body {
-  margin: 0;
+  padding-top: 20px;
   display: flex;
+  flex-direction: column;
   place-items: center;
   justify-content: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
-#canvas {
-  background-color: skyblue;
+#board {
+  display: grid;
+  margin: 50px auto;
+  position: relative;
+  transition: transform 0.5s ease;
+  transform-origin: center center;
 }
+
+.status {
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.direction-indicator {
+  text-align: center;
+  font-size: 28px;
+}
+
+[class^="row-"] {
+  display: flex;
+  height: 75px;
+}
+
+[class^="cell-"] {
+  width: 75px;
+  height: 100%;
+  background: white;
+  position: relative;
+  border: 2px solid #333;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+/* .player {
+  width: 30px;
+  height: 30px;
+  background: yellow;
+  border-radius: 50%;
+  position: absolute;
+  transition: all 0.3s ease;
+  z-index: 2;
+} */
 
 .rotate {
   transition: transform 400ms ease-in-out;

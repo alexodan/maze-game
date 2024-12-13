@@ -1,9 +1,25 @@
+import { SQUARE_SIZE } from "./game";
+
 export type Position = {
   x: number;
   y: number;
 };
 
 export type Direction = "up" | "right" | "down" | "left";
+
+const mapDirectionToBorder = {
+  up: "Top",
+  down: "Bottom",
+  left: "Left",
+  right: "Right",
+} as const;
+
+const oppositeWalls = {
+  Top: "Bottom",
+  Bottom: "Top",
+  Left: "Right",
+  Right: "Left",
+} as const;
 
 export class Player {
   private position!: Position;
@@ -20,76 +36,110 @@ export class Player {
       frames: number;
     }
   >;
-  private ctx!: CanvasRenderingContext2D;
+  private board!: HTMLDivElement;
 
-  constructor(initialPosition: Position, ctx: CanvasRenderingContext2D) {
-    this.initialize(initialPosition, ctx);
+  constructor(initialPosition: Position, board: HTMLDivElement) {
+    this.board = board;
+    this.position = initialPosition;
+    this.draw();
   }
 
-  private initialize(position: Position, ctx: CanvasRenderingContext2D) {
-    this.position = position;
-    this.facing = "down";
-    this.isMoving = false;
-    this.frameIndex = 0;
-    this.ctx = ctx;
-    this.spriteSheet = new Image();
-    this.spriteSheet.src = `/Player_Actions_Anim.png`;
-    this.spriteSheet.onload = () => this.draw(this.ctx);
-
-    // Size of each frame
-    this.spriteSize = 48;
-    this.spritePositions = {
-      down: { row: 9, frames: 6 },
-      up: { row: 10, frames: 6 },
-      left: { row: 11, frames: 6 },
-      right: { row: 6, frames: 6 },
-    };
+  draw(options?: { clear?: boolean }): void {
+    const { x, y } = this.position;
+    const row = this.board.querySelector(`[class="row-${y + 1}"]`)!;
+    const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
+    cell.textContent = options?.clear ? " " : "👣";
   }
 
-  draw(ctx: CanvasRenderingContext2D): void {
-    const position = this.spritePositions[this.facing];
-    const sourceX = this.frameIndex * this.spriteSize;
-    const sourceY = position.row * this.spriteSize;
-
-    ctx.drawImage(
-      this.spriteSheet,
-      sourceX,
-      sourceY,
-      this.spriteSize,
-      this.spriteSize,
-      this.position.x,
-      this.position.y,
-      this.spriteSize,
-      this.spriteSize
-    );
-  }
-
-  move(direction: Direction): Position {
+  move(direction: Direction) {
     this.facing = direction;
-    const moveAmount = 50;
+    const moveAmount = 1;
     const current = this.position;
-    for (let i = 10; i <= moveAmount; i += 10) {
-      switch (direction) {
-        case "down":
-          this.position = { x: current.x, y: current.y + i };
-          break;
-        case "up":
-          this.position = { x: current.x, y: current.y - i };
-          break;
-        case "left":
-          this.position = { x: current.x - i, y: current.y };
-          break;
-        case "right":
-          this.position = { x: current.x + i, y: current.y };
-          break;
-        default:
-          throw Error("invalid direction");
-      }
+    let newPos: Position;
+    switch (direction) {
+      case "down":
+        newPos = { x: current.x, y: current.y + moveAmount };
+        break;
+      case "up":
+        newPos = { x: current.x, y: current.y - moveAmount };
+        break;
+      case "left":
+        newPos = { x: current.x - moveAmount, y: current.y };
+        break;
+      case "right":
+        newPos = { x: current.x + moveAmount, y: current.y };
+        break;
+      default:
+        throw Error("invalid direction");
     }
-    return this.position;
+    if (this.isValidPosition(newPos, direction)) {
+      this.draw({ clear: true });
+      this.position = newPos;
+      this.draw();
+    }
+  }
+
+  isValidPosition(newPosition: Position, direction: Direction) {
+    const rows = this.board.querySelectorAll('[class^="row-"]');
+    const cols = rows[0].querySelectorAll('[class^="cell-"]');
+
+    const isWithinEdges =
+      newPosition.x >= 0 &&
+      newPosition.x < cols.length &&
+      newPosition.y >= 0 &&
+      newPosition.y < rows.length;
+
+    if (!isWithinEdges) return false;
+
+    const currentRow = rows[this.position.y];
+    const currentCell =
+      currentRow.querySelectorAll('[class^="cell-"]')[this.position.x];
+    const targetRow = rows[newPosition.y];
+    const targetCell =
+      targetRow.querySelectorAll('[class^="cell-"]')[newPosition.x];
+
+    const wall = mapDirectionToBorder[direction];
+    const currentWall = getComputedStyle(currentCell)[`border${wall}Width`];
+    const targetWall =
+      getComputedStyle(targetCell)[`border${oppositeWalls[wall]}Width`];
+
+    const isBlockedByWall = currentWall !== "0px" || targetWall !== "0px";
+
+    return !isBlockedByWall;
   }
 
   getPosition(): Position {
     return this.position;
   }
 }
+
+export const winnerPath = [
+  "right",
+  "right",
+  "bottom",
+  "bottom",
+  "left",
+  "bottom",
+  "bottom",
+  "left",
+  "bottom",
+  "bottom",
+  "right",
+  "top",
+  "right",
+  "right",
+  "right",
+  "bottom",
+  "right",
+  "right",
+  "top",
+  "left",
+  "top",
+  "top",
+  "right",
+  "top",
+  "left",
+  "top",
+  "left",
+  "left",
+] as const;

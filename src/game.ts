@@ -1,10 +1,23 @@
-import { Direction, Player, Position } from "./player";
+import { Direction, Player, winnerPath } from "./player";
 
 export type Square = {
   x: number;
   y: number;
   walls: Direction[];
 };
+
+const movementMap = {
+  left: (row: number, col: number) => [row, col - 1],
+  right: (row: number, col: number) => [row, col + 1],
+  top: (row: number, col: number) => [row - 1, col],
+  bottom: (row: number, col: number) => [row + 1, col],
+} as const;
+const oppositeMap = {
+  left: "right",
+  right: "left",
+  top: "bottom",
+  bottom: "top",
+} as const;
 
 export const SQUARE_SIZE = 30;
 
@@ -19,30 +32,24 @@ class Game {
   // [updated]: Changed player initialization to be just null as we'll create it in constructor
   private player: Player;
   private maze: Square[][];
-  private enemy: {
-    position: Position;
-    path: Position[];
-  };
-  private target: Position;
-  private isRunning: boolean = false;
+  // private enemy: {
+  //   position: Position;
+  //   path: Position[];
+  // };
+  // private target: Position;
+  private isRunning = false;
+  private isOver = false;
   private intervalId: number | undefined;
 
-  constructor(ctx: CanvasRenderingContext2D, config: GameConfig) {
+  constructor(board: HTMLDivElement, config: GameConfig) {
     this.maze = []; // generateMaze
-    this.enemy = {
-      position: { x: 1, y: 1 },
-      path: [],
-    };
-    this.target = { x: 4, y: 3 };
     // [updated]: Initialize player here with a starting position
-    this.player = new Player({ x: 100, y: 100 }, ctx);
+    this.player = new Player({ x: 0, y: 0 }, board);
   }
 
   getPlayer() {
     return this.player;
   }
-
-  // [updated]: Removed setPlayer method as we don't need it anymore
 
   update() {
     // Update game state here
@@ -50,90 +57,65 @@ class Game {
     // 2. Check win/lose conditions
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    // Clear the canvas first
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  draw(board: HTMLDivElement) {
     // Draw maze (i dont think redrawing the maze everytime is ok)
-    this.drawMaze(ctx);
-    // [updated]: Simply call player.draw() since player already exists
-    this.player?.draw(ctx);
-    this.drawEnemy(ctx);
-    this.drawTarget(ctx);
+    this.drawMaze(board);
   }
 
-  private drawMaze(ctx: CanvasRenderingContext2D) {
-    const COLS = 8;
-    const OFFSET = 50;
-    const SQUARE_SIZE = 40;
-    const [startX, startY] = [5, 5];
+  private drawMaze(board: HTMLDivElement) {
+    let rows = board.querySelectorAll('[class^="row-"]');
+    let cells = Array.from(rows).map((row) =>
+      row.querySelectorAll('[class^="cell-"]')
+    );
 
-    ctx.fillStyle = "white";
-    for (let i = 0; i < COLS; i++) {
-      for (let j = 0; j < COLS; j++) {
-        ctx.fillRect(
-          startX + i * OFFSET,
-          startY + j * OFFSET,
-          SQUARE_SIZE,
-          SQUARE_SIZE
-        );
-      }
+    let [row, col] = [0, 0];
+
+    for (let i = 0; i < winnerPath.length - 1; i++) {
+      const step = winnerPath[i];
+      const currentCell = cells[row][col] as HTMLDivElement;
+      currentCell.style[`border-${step}` as any] = "none";
+      [row, col] = movementMap[step](row, col);
+      const nextCell = cells[row][col] as HTMLDivElement;
+      nextCell.style[`border-${oppositeMap[step]}` as any] = "none";
     }
+    const lastStep = winnerPath[winnerPath.length - 1];
+    const currentCell = cells[row][col] as HTMLDivElement;
+    currentCell.style[`border-${oppositeMap[lastStep]}` as any] = "none";
   }
 
-  private drawEnemy(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "blue";
-    ctx.fillRect(
-      this.enemy.position.x + 10,
-      this.enemy.position.y + 10,
-      SQUARE_SIZE,
-      SQUARE_SIZE
-    );
-  }
-
-  private drawTarget(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "green";
-    ctx.fillRect(
-      this.target.x + 10,
-      this.target.y + 10,
-      SQUARE_SIZE,
-      SQUARE_SIZE
-    );
-  }
-
-  start(ctx: CanvasRenderingContext2D) {
+  start(board: HTMLDivElement) {
     this.isRunning = true;
+    document.querySelector(".status")!.textContent = "Playing ▶️";
     this.intervalId = setInterval(
-      () => setupRotation(ctx),
+      () => setupRotation(board),
       2500 + Math.random() * 2500
     );
   }
 
   stop() {
     this.isRunning = false;
+    document.querySelector(".status")!.textContent = "Paused ⏸️";
     clearInterval(this.intervalId);
   }
 
   isGameRunning() {
-    return this.isRunning;
+    return this.isRunning && !this.isOver;
   }
 }
 
-export function initGame(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+export function initGame(board: HTMLDivElement): void {
+  board.tabIndex = 1;
+  board.focus();
 
-  canvas.tabIndex = 1;
-  canvas.focus();
+  const game = new Game(board, {});
 
-  const game = new Game(ctx, {});
+  setupControls(game, board);
 
-  setupControls(canvas, game, ctx);
-
-  game.start(ctx);
-  gameLoop(game, ctx);
+  game.start(board);
+  gameLoop(game, board);
 }
 
-function gameLoop(game: Game, ctx: CanvasRenderingContext2D) {
+function gameLoop(game: Game, board: HTMLDivElement) {
   // Only run if game is active/unfinished
   // !game.isRunning || game.isFinished
   if (!game.isGameRunning()) return;
@@ -142,22 +124,14 @@ function gameLoop(game: Game, ctx: CanvasRenderingContext2D) {
   game.update();
 
   // Draw new frame
-  game.draw(ctx);
+  game.draw(board);
 
   // Schedule next frame
-  requestAnimationFrame(() => gameLoop(game, ctx));
+  requestAnimationFrame(() => gameLoop(game, board));
 }
 
-function checkCollision() {
-  return false;
-}
-
-function setupControls(
-  canvas: HTMLCanvasElement,
-  game: Game,
-  ctx: CanvasRenderingContext2D
-) {
-  canvas.addEventListener("keydown", (e) => {
+function setupControls(game: Game, board: HTMLDivElement) {
+  board.addEventListener("keydown", (e) => {
     const mapKeyToDirection = {
       ArrowDown: "down",
       ArrowUp: "up",
@@ -175,18 +149,18 @@ function setupControls(
       if (game.isGameRunning()) {
         game.stop();
       } else {
-        game.start(ctx);
-        gameLoop(game, ctx);
+        game.start(board);
+        gameLoop(game, board);
       }
     }
   });
 }
 
-function setupRotation(ctx: CanvasRenderingContext2D) {
+function setupRotation(board: HTMLDivElement) {
   const direction = Math.random() > 0.5 ? "left" : "right";
   const currentRotation = root.style.getPropertyValue("--rotation");
   if (!currentRotation) {
-    ctx.canvas.classList.add("rotate");
+    board.classList.add("rotate");
   }
   const deg = currentRotation ? parseInt(currentRotation) : 0;
   if (direction === "left") {
