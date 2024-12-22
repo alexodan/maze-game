@@ -1,3 +1,4 @@
+import { MazeGenerator } from "./maze";
 import { Direction, Player, Position, winnerPath } from "./player";
 import { Rival } from "./rival";
 
@@ -33,16 +34,16 @@ class Game {
   private player: Player;
   private rival: Rival;
 
-  private maze: Square[][];
+  private maze: MazeGenerator;
   private target: Position;
   private isRunning = false;
   private isOver = false;
   private intervalId: number | undefined;
 
   constructor(board: HTMLDivElement, config: GameConfig) {
-    this.maze = []; // generateMaze
+    this.maze = new MazeGenerator(7, 7); // generateMaze
     this.player = new Player({ x: 0, y: 0 }, board);
-    this.target = { x: 4, y: 1 };
+    this.target = { x: 4, y: 1 }; // goal
 
     // TODO: extract to its own class Target or smth
     const { x, y } = this.target;
@@ -82,11 +83,12 @@ class Game {
 
   private drawMaze(board: HTMLDivElement) {
     let rows = board.querySelectorAll('[class^="row-"]');
+    // matrix
     let cells = Array.from(rows).map((row) =>
       row.querySelectorAll('[class^="cell-"]')
     );
 
-    let [row, col] = [0, 0];
+    let [row, col] = [0, 0]; // origin
 
     for (let i = 0; i < winnerPath.length - 1; i++) {
       const step = winnerPath[i];

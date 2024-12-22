@@ -1,4 +1,5 @@
 import { SQUARE_SIZE } from "./game";
+import { SpriteSelector } from "./sprite";
 
 export type Position = {
   x: number;
@@ -41,6 +42,25 @@ export class Player {
     this.board = board;
     this.position = initialPosition;
     this.draw();
+
+    // this.spriteSheet = new Image(400, 400);
+    // let sprite = new SpriteSelector(this.spriteSheet, {
+    //   spriteWidth: 64,
+    //   spriteHeight: 64,
+    //   sheetWidth: 256,
+    //   sheetHeight: 256,
+    // });
+
+    // this.spriteSheet.onload = () => {
+    //   // TODO: change this f thing to a Board object instead of selecting these everytime
+    //   const row = this.board.querySelector(
+    //     `[class="row-${this.position.y + 1}"]`
+    //   )!;
+    //   const cell = row.querySelector(`[class="cell-${this.position.x + 1}"]`)!;
+    //   cell.appendChild(sprite.selectSprite(0, 0));
+    // };
+
+    // this.spriteSheet.src = "./Player_Actions_Anim.png";
   }
 
   draw(options?: { clear?: boolean }): void {
@@ -49,7 +69,7 @@ export class Player {
     const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
     const hasRival = cell.textContent?.includes("👻") || false;
     if (options?.clear) {
-      cell.textContent = hasRival ? "👣" : " ";
+      cell.textContent = hasRival ? "👻" : " ";
     } else {
       cell.textContent = hasRival ? "👣👻" : "👣";
     }
@@ -117,6 +137,8 @@ export class Player {
 }
 
 // For testing purposes
+// [row, col]
+// [0, 0] => right => [0, 1] => right => [0, 2]
 export const winnerPath = [
   "right",
   "right",
@@ -147,3 +169,26 @@ export const winnerPath = [
   "left",
   "left",
 ] as const;
+
+// algorithms generate maze
+//   graph of nodes
+//   graph -> matrix ->
+// - winner path
+// - randomly put the target
+
+// CSS Transitions
+// - board sets css variable (class or dataset) based on movement (left,right,top,bottom)
+// - choose sprite based on above
+
+// - moving dom element (image) from one cell to the next cell
+// const fromCell = ??, const toCell = ??
+// window x, y ? -> new x, y (css translate)
+// - happens in an animation interval
+
+// check Navbar
+
+/// -----
+
+// Zod unions
+// example hastPet, petName
+// two objects, and u use union
