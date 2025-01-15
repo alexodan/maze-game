@@ -1,27 +1,15 @@
 import { MazeGenerator } from "./maze";
-import { Direction, Player, Position, winnerPath } from "./player";
+import { PlayerDirection, Player, Position } from "./player";
 import { Rival } from "./rival";
 
 export type Square = {
   x: number;
   y: number;
-  walls: Direction[];
+  walls: PlayerDirection[];
 };
 
-const movementMap = {
-  left: (row: number, col: number) => [row, col - 1],
-  right: (row: number, col: number) => [row, col + 1],
-  top: (row: number, col: number) => [row - 1, col],
-  bottom: (row: number, col: number) => [row + 1, col],
-} as const;
-const oppositeMap = {
-  left: "right",
-  right: "left",
-  top: "bottom",
-  bottom: "top",
-} as const;
-
 export const SQUARE_SIZE = 30;
+export const borderColor = "#00b18a";
 
 const root = document.documentElement;
 
@@ -41,21 +29,21 @@ class Game {
   private intervalId: number | undefined;
 
   constructor(board: HTMLDivElement, config: GameConfig) {
-    this.maze = new MazeGenerator(7, 7); // generateMaze
-    this.player = new Player({ x: 0, y: 0 }, board);
-    this.target = { x: 4, y: 1 }; // goal
+    this.maze = new MazeGenerator(7, 7);
+    this.maze.generate();
 
-    // TODO: extract to its own class Target or smth
+    const start = { x: 0, y: 0 };
+    const { goalPosition, path } = this.maze.findGoalAndPath(start);
+
+    this.player = new Player(start, board, this.maze);
+    this.target = goalPosition;
+
     const { x, y } = this.target;
     const row = board.querySelector(`[class="row-${y + 1}"]`)!;
     const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
     cell.textContent = "⛳";
 
-    this.rival = new Rival(
-      { x: 0, y: 0 },
-      board,
-      winnerPath.slice(0, winnerPath.length - 1)
-    );
+    this.rival = new Rival(start, board, path);
   }
 
   getPlayer() {
@@ -65,42 +53,46 @@ class Game {
   update() {
     const playerPos = this.player.getPosition();
     const rivalPos = this.rival.getPosition();
+
+    // Check win/lose conditions
     if (playerPos.x === this.target.x && playerPos.y === this.target.y) {
       this.isOver = true;
       this.stop();
-      alert("Game over. You win!");
+      setTimeout(() => alert("Game over. You win!"), 50);
     } else if (rivalPos.x === this.target.x && rivalPos.y === this.target.y) {
       this.isOver = true;
       this.stop();
-      alert("Game over. You lost!");
+      setTimeout(() => alert("Game over. You lost!"), 50);
     }
   }
 
-  draw(board: HTMLDivElement) {
-    // TODO: i dont think redrawing the maze everytime is ok
-    this.drawMaze(board);
-  }
-
-  private drawMaze(board: HTMLDivElement) {
+  drawMaze(board: HTMLDivElement) {
     let rows = board.querySelectorAll('[class^="row-"]');
-    // matrix
     let cells = Array.from(rows).map((row) =>
       row.querySelectorAll('[class^="cell-"]')
     );
-
-    let [row, col] = [0, 0]; // origin
-
-    for (let i = 0; i < winnerPath.length - 1; i++) {
-      const step = winnerPath[i];
-      const currentCell = cells[row][col] as HTMLDivElement;
-      currentCell.style[`border-${step}` as any] = "none";
-      [row, col] = movementMap[step](row, col);
-      const nextCell = cells[row][col] as HTMLDivElement;
-      nextCell.style[`border-${oppositeMap[step]}` as any] = "none";
+    // New code to draw the Aldous-Broder generated maze
+    for (let row = 0; row < 7; row++) {
+      for (let col = 0; col < 7; col++) {
+        const cell = this.maze.getCell(row, col);
+        if (!cell) continue;
+        const domCell = cells[row][col] as HTMLDivElement;
+        // Reset borders first
+        domCell.style.border = `8px solid ${borderColor}`;
+        if (cell.connections.has("north")) {
+          domCell.style.borderTop = "none";
+        }
+        if (cell.connections.has("south")) {
+          domCell.style.borderBottom = "none";
+        }
+        if (cell.connections.has("east")) {
+          domCell.style.borderRight = "none";
+        }
+        if (cell.connections.has("west")) {
+          domCell.style.borderLeft = "none";
+        }
+      }
     }
-    const lastStep = winnerPath[winnerPath.length - 1];
-    const currentCell = cells[row][col] as HTMLDivElement;
-    currentCell.style[`border-${oppositeMap[lastStep]}` as any] = "none";
   }
 
   start(board: HTMLDivElement) {
@@ -108,7 +100,7 @@ class Game {
     document.querySelector(".status")!.textContent = "Playing ▶️";
     this.intervalId = setInterval(
       () => setupRotation(board),
-      2500 + Math.random() * 2500
+      1000 + Math.random() * 1000
     );
     this.rival.startMoving(800);
   }
@@ -138,16 +130,10 @@ export function initGame(board: HTMLDivElement): void {
 }
 
 function gameLoop(game: Game, board: HTMLDivElement) {
-  // !game.isRunning || game.isOver?
   if (!game.isGameRunning()) return;
 
-  // Update game state
   game.update();
-
-  // Draw new frame
-  game.draw(board);
-
-  // Schedule next frame
+  game.drawMaze(board);
   requestAnimationFrame(() => gameLoop(game, board));
 }
 

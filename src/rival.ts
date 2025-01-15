@@ -1,25 +1,25 @@
-import { Player, Position } from "./player";
+import { Player, PlayerDirection, Position } from "./player";
 
 export class Rival {
   private position: Position;
   private board: HTMLDivElement;
   private pathIndex: number = 0;
   private moveInterval: number | undefined;
-  private winnerPath: ("right" | "left" | "bottom" | "top")[];
+  private winnerPath: PlayerDirection[];
 
   constructor(
     initialPosition: Position,
     board: HTMLDivElement,
-    winnerPath: ("right" | "left" | "bottom" | "top")[]
+    winnerPath: PlayerDirection[]
   ) {
     this.position = initialPosition;
     this.board = board;
     this.winnerPath = winnerPath;
-    this.draw();
+    this.draw(initialPosition);
   }
 
-  draw(options?: { clear?: boolean }): void {
-    const { x, y } = this.position;
+  draw(position: Position, options?: { clear?: boolean }): void {
+    const { x, y } = position;
     const row = this.board.querySelector(`[class="row-${y + 1}"]`)!;
     const cell = row.querySelector(`[class="cell-${x + 1}"]`)!;
 
@@ -54,16 +54,16 @@ export class Rival {
     }
   }
 
-  private move(direction: string) {
+  private move(direction: PlayerDirection) {
     const moveAmount = 1;
     const current = this.position;
     let newPos: Position;
 
     switch (direction) {
-      case "bottom":
+      case "down":
         newPos = { x: current.x, y: current.y + moveAmount };
         break;
-      case "top":
+      case "up":
         newPos = { x: current.x, y: current.y - moveAmount };
         break;
       case "left":
@@ -76,9 +76,9 @@ export class Rival {
         throw Error("invalid direction");
     }
 
-    this.draw({ clear: true });
+    this.draw(this.position, { clear: true });
+    this.draw(newPos);
     this.position = newPos;
-    this.draw();
   }
 
   getPosition(): Position {

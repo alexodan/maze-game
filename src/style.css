@@ -15,6 +15,7 @@ body {
   flex-direction: column;
   place-items: center;
   justify-content: center;
+  background-color: #9bcec4;
 }
 
 #board {
@@ -23,6 +24,7 @@ body {
   position: relative;
   transition: transform 0.5s ease;
   transform-origin: center center;
+  background-color: #005140;
 }
 
 .status {
@@ -43,9 +45,8 @@ body {
 [class^="cell-"] {
   width: 75px;
   height: 100%;
-  background: white;
+  background: #005140;
   position: relative;
-  border: 2px solid #333;
   box-sizing: border-box;
   display: flex;
   align-items: center;
