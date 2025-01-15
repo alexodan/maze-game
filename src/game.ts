@@ -25,8 +25,8 @@ class Game {
   private maze: MazeGenerator;
   private target: Position;
   private isRunning = false;
-  private isOver = false;
   private intervalId: number | undefined;
+  public isOver = false;
 
   constructor(board: HTMLDivElement, config: GameConfig) {
     this.maze = new MazeGenerator(7, 7);
@@ -58,11 +58,15 @@ class Game {
     if (playerPos.x === this.target.x && playerPos.y === this.target.y) {
       this.isOver = true;
       this.stop();
-      setTimeout(() => alert("Game over. You win!"), 50);
+      setTimeout(() => {
+        document.querySelector(".status")!.textContent = "Game over. You win!";
+      }, 50);
     } else if (rivalPos.x === this.target.x && rivalPos.y === this.target.y) {
       this.isOver = true;
       this.stop();
-      setTimeout(() => alert("Game over. You lost!"), 50);
+      setTimeout(() => {
+        document.querySelector(".status")!.textContent = "Game over. You lost!";
+      }, 50);
     }
   }
 
@@ -159,6 +163,19 @@ function setupControls(game: Game, board: HTMLDivElement) {
         game.start(board);
         gameLoop(game, board);
       }
+    }
+  });
+
+  board.addEventListener("blur", () => {
+    if (game.isGameRunning()) {
+      game.stop();
+    }
+  });
+
+  board.addEventListener("focus", () => {
+    if (!game.isGameRunning() && !game.isOver) {
+      game.start(board);
+      gameLoop(game, board);
     }
   });
 }
